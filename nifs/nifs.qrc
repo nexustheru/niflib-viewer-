@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="nifs"/>
+  <qresource prefix="nifs/icons">
+    <file>icons/Blue_Abstract_Wallpaper.png</file>
+  </qresource>
+</RCC>
