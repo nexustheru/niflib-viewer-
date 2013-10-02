@@ -33,13 +33,16 @@
 #include <QList>
 #include <QListWidgetItem>
 #include <tri.h>
+extern "C" 
+{
+#include <Conformulator.h>
+}
 #define _USE_MATH_DEFINES
 
-QVector<trifile::fCOORDS> trivertices;
-QVector<trifile::triCOORDS> tritriangles;
-QVector<trifile::uvCOORDS> triuvvert;
-QVector<trifile::triCOORDS> triuvtriangles;
-QVector<trifile::morphdata> morps;
+QVector<TriMorphDataType> morpsd;
+QVector<Vertex> trivertexes;
+QVector<TriData> trivertfaces;
+
 vector<INT32> sised;
 
 const char* fnam;
@@ -525,21 +528,7 @@ glTranslatef(0.0f, -6.0f, -50.0f);	// Move 40 Units And Into The Screen
 }
 void buildtrifilestuff(void)
 {
-	         for (int t = 0; t < tritriangles.count(); ++t)
-            {
-            Niflib::Triangle face;
-			face.Set(tritriangles[t].a,tritriangles[t].b,tritriangles[t].c);
-            glBegin(GL_TRIANGLES);
 
-            for(int i = 0; i < 3; i++)		// go through all vertices in face
-            {
-                int vertexIndex = face[i];	// get group index for current index
-                 glVertex2iv(&tritriangles[vertexIndex].a);
-            }
-
-            glEnd();
-
-        }
 }
 void tribuild()
 {
@@ -547,58 +536,93 @@ void tribuild()
 	  INT32 headvert;
 	  INT32 polytr;
 	  INT32 numbermorph;
+	  INT32 allheadvertices;
       std::filebuf tribuf;
-      tribuf.open ("eyeskhajiitfemale.tri",std::ios::in|std::ios::binary);
+      tribuf.open (fname1.toStdString().c_str(),std::ios::in|std::ios::binary);
 	  std::istream readtri(&tribuf);
+	   readtri.seekg(0x24,readtri.beg);
+	  readtri.read(reinterpret_cast<char*>(&numbermorph), sizeof(numbermorph));
 	  readtri.seekg(0x08,readtri.beg);
 	  readtri.read(reinterpret_cast<char*>(&headvert), sizeof(headvert));
 	  readtri.seekg(0x0c,readtri.beg);
 	  readtri.read(reinterpret_cast<char*>(&polytr), sizeof(polytr));
-	  ///vertices
-	  readtri.seekg(0x40,readtri.beg);
-	  for (int i=0; i<headvert; i++)
-		{
-			trifile::fCOORDS ft;
-			readtri.read(reinterpret_cast<char*>(&ft), sizeof(ft));
-			//readtri.read(reinterpret_cast<char*>(&ft.y), sizeof(ft.y));
-			//readtri.read(reinterpret_cast<char*>(&ft.z), sizeof(ft.z));
-			trivertices.push_back(ft);
-	    }
-	  ///triangles
-	  readtri.seekg(0x298,readtri.beg);
-	  for (int i=0; i<polytr; i++)
-		{
-			trifile::triCOORDS tt;
-			readtri.read(reinterpret_cast<char*>(&tt), sizeof(tt));
-			//readtri.read(reinterpret_cast<char*>(&tt.b), sizeof(tt.b));
-			//readtri.read(reinterpret_cast<char*>(&tt.c), sizeof(tt.c));
-			
-			tritriangles.push_back(tt);
-	    }
+	  readtri.seekg(0x2c,readtri.beg);
+	  readtri.read(reinterpret_cast<char*>(&allheadvertices), sizeof(allheadvertices));
 
-	  ///uvvertices
-	  readtri.seekg(0x658,readtri.beg);
-	   for (int i=0; i<headvert; i++)
+	  ///vertices
+
+	  readtri.seekg(0x40,readtri.beg);
+
+		for (int i=0; i<headvert; i++)
 		{
-			trifile::uvCOORDS uft;
-			readtri.read(reinterpret_cast<char*>(&uft), sizeof(uft));
+			Vertex k;
+          readtri.read(reinterpret_cast<char*>(&k.x), sizeof(float));
+		  readtri.read(reinterpret_cast<char*>(&k.y), sizeof(float));
+		  readtri.read(reinterpret_cast<char*>(&k.z), sizeof(float));
+		  trivertexes.push_back(k);
+		}
+		readtri.seekg(0x298,readtri.beg);
+
+		for (int ik=0; ik<headvert; ik++)
+		{
+			TriData td;
+          readtri.read(reinterpret_cast<char*>(&td.a), sizeof(int));
+		  readtri.read(reinterpret_cast<char*>(&td.b), sizeof(int));
+		  readtri.read(reinterpret_cast<char*>(&td.c), sizeof(int));
+		  trivertfaces.push_back(td);
+		}
+
+	        long int MorphStart,temp;
+			int NameSize,TriSize,QuadSize,UVSize;
+			readtri.seekg(0x24,readtri.beg);
+			MorphStart=0x40+((headvert+allheadvertices)*12);
+			readtri.seekg(0x0c,readtri.beg);
+			readtri.read(reinterpret_cast<char*>(&TriSize), sizeof(int));
+			readtri.read(reinterpret_cast<char*>(&QuadSize), sizeof(int));
+			temp=(TriSize*12)+(QuadSize*16);
+			readtri.seekg(0x1c,readtri.beg);
+			readtri.read(reinterpret_cast<char*>(&UVSize), sizeof(int));
+			MorphStart=MorphStart+(UVSize*8);
+			temp=temp*2;
+			MorphStart=MorphStart+temp;
 			
-			//readtri.read(reinterpret_cast<char*>(&uft.v), sizeof(uft.v));
-			triuvvert.push_back(uft);
-	    }
-	  ///uvtriangles
-	   readtri.seekg(0x7E8,readtri.beg);
-	  for (int i=0; i<polytr; i++)
-		{
-			trifile::triCOORDS uvf;
-			readtri.read(reinterpret_cast<char*>(&uvf), sizeof(uvf));
-			//readtri.read(reinterpret_cast<char*>(&uvf.b), sizeof(uvf.b));
-			//readtri.read(reinterpret_cast<char*>(&uvf.c), sizeof(uvf.c));
-			triuvtriangles.push_back(uvf);
-	    }
-	  ///morphs
-	  
-	 // buildtrifilestuff();
+			readtri.seekg(MorphStart,readtri.beg);
+			for (int i=0;i<numbermorph;i++)
+			{
+				TriMorphDataType morpdata;
+				int intsize;
+				char* buff;
+				readtri.read(reinterpret_cast<char*>(&intsize), sizeof(int));
+				buff=new char[intsize];
+                morpdata.MorphName=QString(buff).toStdString();
+				byte b;
+				byte b1;
+				byte b2;
+				byte b3;
+				readtri.read(buff,intsize);
+				readtri.read(reinterpret_cast<char*>(&b), sizeof(byte));
+				readtri.read(reinterpret_cast<char*>(&b1), sizeof(byte));
+				readtri.read(reinterpret_cast<char*>(&b2), sizeof(byte));
+				readtri.read(reinterpret_cast<char*>(&b3), sizeof(byte));
+				morpdata.scalex=b;
+				morpdata.scaley=b1;
+				morpdata.scalez=b2;
+				morpdata.scale=b3;
+				std::vector<VertexShort> shortv;
+				for (int j=0;j<headvert;j++)
+			    {
+					VertexShort vs;
+					readtri.read(reinterpret_cast<char*>(&vs.x), sizeof(short));
+					qDebug(QString::number(vs.x).toStdString().c_str());
+				    readtri.read(reinterpret_cast<char*>(&vs.y), sizeof(short));
+				    readtri.read(reinterpret_cast<char*>(&vs.z), sizeof(short));
+					morpdata.MorphData.push_back(vs);
+				}
+				morpsd.push_back(morpdata);
+				qDebug(QString::number(morpdata.MorphData.size()).toStdString().c_str());
+			}
+		
+
 }
 void opengl::determinefiltype(QString fname)
 {
@@ -723,7 +747,7 @@ glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear The Screen And The 
 	 glDisable(GL_TEXTURE_COORD_ARRAY);
 	
 	}
-	else if(trivertices.count() >0 )
+	else if(trivertexes.count() >0 )
 	{
 	 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear The Screen And The Depth Buffer
 	 glMatrixMode(GL_MODELVIEW);

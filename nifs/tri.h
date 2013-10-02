@@ -48,10 +48,6 @@ struct quadCOORDS
 	int a,b,c,d;
 };
 
-struct VertexShort
-{
-	short x,y,z;
-};
 
 struct uvCOORDS 
 {
@@ -63,13 +59,11 @@ struct morphvertices
 	short x,y,z;
 };
 
-
-struct morphdata
+struct morph
 {
-	INT32 siz;
-	std::string name;
-	int scalex,scaley,scalez,scale;
-	std::vector<VertexShort> MorphData;
+	int size;
+	string name;
+	int scale;
 };
 
 };
